@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<robot name="depth_camera_connect" xmlns:xacro="http://ros.org/wiki/xacro">
+  <xacro:property name="M_PI"                           value="3.1415926535897931"/>
+  <xacro:property name="depth_camera_connect_link_mass" value="0.1"/>
+  <xacro:property name="depth_camera_connect_link_w"    value="0.02"/>
+  <xacro:property name="depth_camera_connect_link_h"    value="0.02"/>
+  <xacro:property name="depth_camera_connect_link_d"    value="0.4"/>
+
+  <xacro:property name="depth_camera_connect_center_link_mass" value="0.1"/>
+  <xacro:property name="depth_camera_connect_center_link_w"    value="0.02"/>
+  <xacro:property name="depth_camera_connect_center_link_h"    value="0.1"/>
+  <xacro:property name="depth_camera_connect_center_link_d"    value="0.02"/>
+
+  <link
+    name="connect_link">
+    <inertial>
+      <origin
+        xyz="0.0157454999898842 4.72901700814714E-06 -0.00844255896724239"
+        rpy="0 0 0" />
+      <mass
+        value="0.0965760388990747" />
+      <inertia
+        ixx="0.000603175304915837"
+        ixy="-1.42578324620406E-09"
+        ixz="5.55222015340927E-05"
+        iyy="0.000578480590118108"
+        iyz="-8.00880290962271E-10"
+        izz="9.57231111516271E-05" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://jetauto_description/meshes/pro/connect_link.stl" />
+      </geometry>
+      <material name="black"/>
+    </visual>
+  </link>
+  <joint
+    name="connect_joint"
+    type="fixed">
+    <origin
+      xyz="-1.41302397143953E-05 -0.0670207518529807 -0.210752990303307"
+      rpy="3.14159265358979 0 1.5707963267949" />
+    <parent
+      link="back_shell_link" />
+    <child
+      link="connect_link" />
+    <axis
+      xyz="0 0 0" />
+  </joint>
+
+  <link name="depth_camera_connect_left_link">
+    <xacro:box_inertial m="${depth_camera_connect_link_mass}"
+                        w="${depth_camera_connect_link_w}"
+                        h="${depth_camera_connect_link_h}"
+                        d="${depth_camera_connect_link_d}"/>
+    <collision>
+      <origin xyz="-0.136 0.06 0.28" rpy="0 0 0"/>
+      <geometry>
+        <box size="${depth_camera_connect_link_w} ${depth_camera_connect_link_h} ${depth_camera_connect_link_d}" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="depth_camera_connect_left_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="depth_camera_connect_left_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="depth_camera_connect_right_link">
+    <xacro:box_inertial m="${depth_camera_connect_link_mass}"
+                        w="${depth_camera_connect_link_w}"
+                        h="${depth_camera_connect_link_h}"
+                        d="${depth_camera_connect_link_d}"/>
+    <collision>
+      <origin xyz="-0.136 -0.06 0.28" rpy="0 0 0"/>
+      <geometry>
+        <box size="${depth_camera_connect_link_w} ${depth_camera_connect_link_h} ${depth_camera_connect_link_d}" />
+      </geometry>
+    </collision>
+  </link>
+
+  <joint name="depth_camera_connect_right_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="depth_camera_connect_right_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+
+  <link name="depth_camera_connect_center_link">
+    <xacro:box_inertial m="${depth_camera_connect_center_link_mass}"
+                        w="${depth_camera_connect_center_link_w}"
+                        h="${depth_camera_connect_center_link_h}"
+                        d="${depth_camera_connect_center_link_d}"/>
+    <collision>
+      <origin xyz="-0.136 0 0.47" rpy="0 0 0"/>
+      <geometry>
+        <box size="${depth_camera_connect_center_link_w} ${depth_camera_connect_center_link_h} ${depth_camera_connect_center_link_d}" />
+      </geometry>
+    </collision>
+
+  </link>
+
+  <joint name="depth_camera_connect_center_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="depth_camera_connect_center_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+</robot>

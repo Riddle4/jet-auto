@@ -4,9 +4,9 @@ Date d'observation: 2026-06-04, depuis le reseau Cosmo-Robotics.
 
 ## Resume
 
-Le robot repond a l'adresse `192.168.100.50`. Il expose un systeme ROS 2 Humble accessible via `rosbridge_websocket` et `web_video_server`. La signature generale correspond a un robot mobile 4 roues avec Jetson, controleur moteur/servo, LiDAR 2D, IMU, odometrie, camera USB, camera RGB-D Orbbec/depth, bras et gripper.
+Le robot repond a l'adresse `192.168.100.50`. Il s'agit d'un JetAuto base sur NVIDIA Jetson Orin Nano 8GB, avec Ubuntu 22.04.5 LTS, L4T R36.4.3, ROS 2 Humble, controleur moteur/servo, LiDAR 2D, IMU, odometrie, camera USB, camera RGB-D Orbbec/depth, bras et gripper.
 
-L'acces SSH est ouvert mais necessite un mot de passe ou une cle autorisee. Les comptes courants testes en mode non interactif (`jetson`, `ubuntu`, `nvidia`, `pi`, `root`, `cosmo`, `jetauto`, `hiwonder`) n'acceptent pas les cles locales.
+L'acces SSH par cle fonctionne avec l'utilisateur `ubuntu`.
 
 ## Identite reseau
 
@@ -18,6 +18,37 @@ L'acces SSH est ouvert mais necessite un mot de passe ou une cle autorisee. Les 
 | SSH | `OpenSSH_8.9p1 Ubuntu-3ubuntu0.10` |
 | ROS | ROS 2 `humble`, via `/rosapi/get_ros_version` |
 
+## Inventaire systeme
+
+| Element | Valeur observee |
+| --- | --- |
+| Utilisateur SSH | `ubuntu` |
+| Hostname | `ubuntu` |
+| OS | Ubuntu `22.04.5 LTS` |
+| Kernel | `5.15.148-tegra` |
+| Architecture | `aarch64` |
+| Plateforme | `NVIDIA Jetson Orin Nano Engineering Reference Developer Kit Super` |
+| Module | `NVIDIA Jetson Orin Nano (8GB ram)` d'apres l'environnement |
+| L4T | `R36.4.3`, date NVIDIA `2025-01-08` |
+| CUDA | `12.6` d'apres `nvidia-smi` |
+| GPU | `Orin (nvgpu)` |
+| CPU | 6 coeurs Cortex-A78AE |
+| RAM | 7.4 GiB, environ 4.0 GiB disponibles pendant l'observation |
+| Swap | 11 GiB, non utilise pendant l'observation |
+| Disque systeme | NVMe, `/dev/nvme0n1p1`, 116G dont 52G utilises |
+| Temperature observee | environ 52 a 54 degC via `tegrastats` |
+
+Le rapport brut complet est sauvegarde dans `system-inventory-2026-06-04.txt`.
+
+## Sauvegardes ajoutees
+
+- `system-inventory-2026-06-04.txt`: inventaire brut collecte par SSH.
+- `ros2-config-snapshot/`: snapshot des `package.xml`, `*.launch.py`, `*.yaml` et `*.xacro` de `/home/ubuntu/ros2_ws/src`.
+- `systemd/start_app_node.service.txt`: unite systemd qui demarre le bringup ROS.
+- `systemd/x11vnc.service.txt`: unite systemd qui demarre VNC.
+- `assets/`: snapshots camera captures via `web_video_server`.
+- `../../scripts/collect_robot_info.sh`: script de collecte reutilisable depuis le poste local.
+
 ## Ports ouverts
 
 | Port | Service | Observation |
@@ -28,6 +59,14 @@ L'acces SSH est ouvert mais necessite un mot de passe ou une cle autorisee. Les 
 | `5900/tcp` | VNC/RFB | Banniere `RFB 003.008`. |
 | `8080/tcp` | `web_video_server` | Liste et snapshots des topics image ROS. |
 | `9090/tcp` | `rosbridge_websocket` | API WebSocket ROS 2, serveur Tornado 6.1. |
+
+Interfaces supplementaires observees sur le robot:
+
+- `wlan0`: `192.168.100.50/24`, MAC `48:8f:4c:de:bf:00`, reseau Cosmo-Robotics.
+- `eth0`: `192.168.1.18/24`, route par defaut prioritaire via `192.168.1.1`.
+- `l4tbr0`: `192.168.55.1/24`, bridge USB Jetson, lien down au moment de l'observation.
+- `docker0`: `172.17.0.1/16`, lien down au moment de l'observation.
+- `can0`: present mais down.
 
 ## Interfaces Web utiles
 
@@ -47,6 +86,25 @@ Deux snapshots ont ete captures:
 Les snapshots suivants n'ont pas donne d'image pendant l'observation, probablement parce que les applications ne publiaient pas activement: `/line_following/image_result`, `/object_tracking/image_result`, `/ar_app/image_result`.
 
 ## ROS 2
+
+Le demarrage ROS principal est gere par l'unite systemd `start_app_node.service`, qui lance:
+
+```bash
+ros2 launch bringup bringup.launch.py
+```
+
+Le launch principal sauvegarde dans `ros2-config-snapshot/bringup/launch/bringup.launch.py` inclut:
+
+- le controleur robot et odometrie,
+- la camera de profondeur,
+- le LiDAR,
+- `rosbridge_websocket`,
+- `web_video_server`,
+- les applications prechargees,
+- le controle joystick,
+- l'initialisation de pose.
+
+L'environnement ROS expose `ROS_DISTRO=humble`, `ROS_VERSION=2`, `ROS_LOCALHOST_ONLY=0`.
 
 ### Nodes detectes
 
@@ -78,6 +136,30 @@ Nodes principaux visibles via `/rosapi/nodes`:
 - `/web_video_server`
 - `/rosbridge_websocket`
 - `/rosapi`
+
+### Workspaces et packages
+
+Le workspace principal est `/home/ubuntu/ros2_ws`. Il contient notamment:
+
+- `bringup`
+- `driver/controller`
+- `driver/ros_robot_controller`
+- `driver/servo_controller`
+- `peripherals`
+- `app`
+- `navigation`
+- `slam`
+- `simulations/jetauto_description`
+- `xf_mic_asr_offline`
+- `large_models`
+- `large_models_examples`
+
+Workspaces tiers detectes:
+
+- `/home/ubuntu/third_party/third_party_ws`
+- `/home/ubuntu/third_party/orbbec_ws`
+- `/home/ubuntu/third_party/rtabmap_ws`
+- `/home/ubuntu/third_party/YDLidar-SDK`
 
 ### Topics importants
 
@@ -137,7 +219,7 @@ Applications:
 
 Topic: `/ros_robot_controller/battery`
 
-Valeur observee: `11369`, interpretable comme environ `11.369 V` si l'unite du firmware est le millivolt.
+Valeur observee via rosbridge: `11369`, interpretable comme environ `11.369 V` si l'unite du firmware est le millivolt. L'echantillon via `ros2 topic echo` n'a pas publie pendant le timeout court de l'inventaire SSH.
 
 ### IMU
 
@@ -198,6 +280,47 @@ Services notables:
 
 Attention: plusieurs de ces services peuvent modifier l'etat du robot. Les observations ci-dessus ont ete faites avec des appels de lecture et des abonnements uniquement, sans envoyer de commande de mouvement.
 
+## Services systemd
+
+Services importants actifs:
+
+- `start_app_node.service`: demarrage du stack ROS JetAuto.
+- `ssh.service`: acces SSH par cle, utilisateur `ubuntu`.
+- `x11vnc.service`: VNC sur `:0`, authentification par `/home/ubuntu/.vnc/passwd`.
+- `docker.service` et `containerd.service`: installes et actifs, mais l'utilisateur `ubuntu` n'a pas l'acces au socket Docker pendant l'observation.
+- `snap.cups.cupsd.service`: CUPS via snap.
+- `nvargus-daemon.service`, `nvfancontrol.service`, services NVIDIA Jetson.
+- `nxserver.service`: NoMachine Server actif.
+
+Un seul service en echec a ete observe:
+
+- `apport-autoreport.service`: failed, lie au reporting d'erreurs Ubuntu.
+
+## Processus ROS principaux
+
+Le process parent ROS observe est:
+
+```bash
+/usr/bin/python3 /opt/ros/humble/bin/ros2 launch bringup bringup.launch.py
+```
+
+Processus notables:
+
+- `component_container` en namespace `/depth_cam`, node `camera_container`.
+- `ros_robot_controller`.
+- `odom_publisher`.
+- `ekf_node`, node `ekf_filter_node`.
+- `servo_controller`.
+- `usb_cam_node_exe`.
+- `undistort_node`.
+- `sllidar_node`.
+- `scan_to_scan_filter_chain`.
+- `web_video_server`.
+- `rosbridge_websocket` et `rosapi_node`.
+- apps `lidar_controller`, `line_following`, `object_tracking`, `ar_app`, `patrol`.
+- `joystick_control`.
+- `robot_state_publisher` avec `/home/ubuntu/ros2_ws/src/simulations/jetauto_description/urdf/jetauto.xacro`.
+
 ## CUPS
 
 CUPS `2.4.19` est expose sur le port `631`. Une imprimante est configuree:
@@ -208,31 +331,31 @@ CUPS `2.4.19` est expose sur le port `631`. Une imprimante est configuree:
 
 ## Limites de l'analyse
 
-- Pas d'acces shell obtenu: SSH repond mais demande une authentification non disponible localement.
-- Sans SSH, les informations internes comme `uname -a`, version JetPack/L4T, packages installes, services systemd, espace disque, temperature, GPU, Docker et configuration reseau complete n'ont pas pu etre verifies.
+- Les commandes ont ete limitees a de la lecture et a de l'inventaire. Aucun ordre de mouvement, de redemarrage materiel ou de controle moteur n'a ete envoye.
+- L'inventaire Docker n'a pas pu lister les conteneurs car `ubuntu` n'a pas acces a `/var/run/docker.sock`.
 - Les topics ROS publies sporadiquement ou uniquement quand une application est active peuvent ne pas apparaitre dans les echantillons.
+- Le snapshot de configuration ROS ne contient pas tout le code source: il sauvegarde les manifestes, launch files, YAML et Xacro utiles a l'analyse.
 
 ## Prochaine etape recommandee
 
-Fournir un compte SSH ou installer une cle publique sur le robot, puis relancer une inspection systeme complete:
+Ajouter un alias SSH local:
 
-```bash
-ssh <user>@192.168.100.50
+```sshconfig
+Host jetauto
+  HostName 192.168.100.50
+  User ubuntu
+  IdentityFile ~/.ssh/id_ed25519
 ```
 
-Une fois connecte, verifier au minimum:
+Puis utiliser:
 
 ```bash
-hostnamectl
-uname -a
-cat /etc/os-release
-dpkg -l | grep -E 'ros-|nvidia|jetpack|l4t'
-systemctl --type=service --state=running
-ip addr
-df -h
-free -h
-tegrastats
-ros2 node list
-ros2 topic list -t
-ros2 service list -t
+ssh jetauto
 ```
+
+Ensuite, les prochaines actions utiles sont:
+
+- securiser VNC, rosbridge et CUPS si le robot sort du reseau de labo;
+- tester les commandes de mouvement uniquement roues levees ou dans un espace degage;
+- sauvegarder les sources complets de `/home/ubuntu/ros2_ws/src` si le robot doit etre reproductible a l'identique;
+- documenter une procedure de restauration de l'environnement ROS.

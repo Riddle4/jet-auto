@@ -1,0 +1,87 @@
+from launch_ros.actions import Node
+from launch import LaunchDescription
+from launch.substitutions import LaunchConfiguration
+from launch.actions import DeclareLaunchArgument, SetEnvironmentVariable
+
+def generate_launch_description():
+
+    use_sim_time = LaunchConfiguration('use_sim_time')
+    qos = LaunchConfiguration('qos')
+
+    parameters={
+          'frame_id':'base_footprint',
+          'use_sim_time':use_sim_time,
+          'subscribe_rgbd':True,
+          'subscribe_scan': True,
+          'use_action_for_goal':True,
+          'qos_scan':qos,
+          'qos_image':qos,
+          'qos_imu':qos,
+          # RTAB-Map's parameters should be strings:
+          'queue_size': 50,
+          'Reg/Strategy':'1',
+          'Reg/Force3DoF':'true',
+          'RGBD/NeighborLinkRefining':'true',
+          'RGBD/ProximityMaxDepth': '2.5',
+          'RGBD/ProximityMinDepth': '0.1',
+          'Grid/RangeMin':'0.2', # ignore laser scan points on the robot itself
+          'Grid/RangeMax': '1.5',
+          'Optimizer/GravitySigma':'0', # Disable imu constraints (we are already in 2D)
+          'Vis/CorType': '1',
+          'OdomF2M/MaxSize': '4000',
+          'Vis/MaxFeatures': '2000',
+          'Optimizer/Slam2D': 'true',
+          'Grid/NormalsSegmentation':'true',
+          'grid_size': '20',
+          'Grid/GroundThr': '0.1',
+          'Grid/FlatObstacleDetected': 'true',
+          'Grid/Sensor': 'false',
+          'RGBD/ProximityPathMaxNeighbors': '10',
+          'Grid/MaxGroundAngle': '45',
+          'proj_max_ground_height': '0.5',
+          'proj_max_ground_angle': '45',
+          'proj_min_cluster_size': '100',
+    }
+
+    remappings=[
+            ('/tf', 'tf'),
+            ('/tf_static', 'tf_static'),
+            ('rgb/image', 'depth_cam/rgb/image_raw'),
+            ('rgb/camera_info', 'depth_cam/rgb/camera_info'),
+            ('depth/image', 'depth_cam/depth/image_raw'),
+            ('odom', '/odom'),
+          ]
+
+    return LaunchDescription([
+
+        # Launch arguments
+        DeclareLaunchArgument(
+            'use_sim_time', default_value='false',
+            description='Use simulation (Gazebo) clock if true'),
+        
+        DeclareLaunchArgument(
+            'qos', default_value='2',
+            description='QoS used for input sensor topics'),
+            
+        # Nodes to launch
+        Node(
+            package='rtabmap_sync', executable='rgbd_sync', output='screen',
+            parameters=[{'approx_sync':True, 'approx_sync_max_interval': 0.06, 'use_sim_time':use_sim_time, 'qos':qos}],
+            remappings=remappings),
+
+        # SLAM Mode:
+        Node(
+            package='rtabmap_slam', executable='rtabmap', output='screen',
+            parameters=[parameters],
+            remappings=remappings,
+            arguments=['-d']),
+        
+    ])
+
+if __name__ == '__main__':
+    # Create a LaunchDescription object. (创建一个LaunchDescription对象)
+    ld = generate_launch_description()
+
+    ls = LaunchService()
+    ls.include_launch_description(ld)
+    ls.run()
